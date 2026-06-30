@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ParaNegosyo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #f0f2f5; min-height: 100vh; }
+
+  /* LOADING */
+  #loading-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; }
+  .spinner { width:36px; height:36px; border:3px solid #ddd; border-top-color:#e8a020; border-radius:50%; animation:spin .8s linear infinite; margin-bottom:16px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* LOGIN */
+  #login-screen { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
+  .login-card { background:#fff; border-radius:16px; padding:40px 32px; max-width:360px; width:100%; text-align:center; box-shadow:0 2px 12px #0001; }
+  .login-logo { font-size:26px; font-weight:800; color:#e8a020; margin-bottom:2px; }
+  .login-sub { font-size:12px; color:#999; letter-spacing:.08em; text-transform:uppercase; margin-bottom:28px; }
+  .login-desc { font-size:13px; color:#777; margin-bottom:26px; line-height:1.6; }
+  .btn-google { display:flex; align-items:center; justify-content:center; gap:12px; background:#fff; color:#333; border:1px solid #ddd; border-radius:8px; padding:13px 20px; width:100%; font-size:14px; font-weight:500; cursor:pointer; }
+  .btn-google:hover { background:#f7f7f7; }
+  .g-icon { width:20px; height:20px; }
+  .login-note { font-size:11px; color:#aaa; margin-top:18px; }
+
+  /* APP */
+  #app-screen { display:none; }
+  nav { background: #1a1a2e; padding: 0 16px; display: flex; align-items:center; justify-content:space-between; }
+  .nav-tabs { display:flex; gap:4px; }
+  nav button { background: none; border: none; color: #aaa; padding: 16px 18px; cursor: pointer; font-size: 14px; font-weight: 500; border-bottom: 3px solid transparent; }
+  nav button.active { color: #fff; border-bottom-color: #e8a020; }
+  .nav-user { display:flex; align-items:center; gap:8px; }
+  .user-avatar { width:26px; height:26px; border-radius:50%; overflow:hidden; background:#e8a020; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#1a1a2e; }
+  .user-avatar img { width:100%; height:100%; object-fit:cover; }
+  .btn-signout { background:none; border:1px solid #444; color:#aaa; font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; }
+  .btn-signout:hover { color:#fff; border-color:#888; }
+
+  .page { display: none; padding: 24px; max-width: 800px; margin: 0 auto; }
+  .page.active { display: block; }
+  h2 { font-size: 20px; margin-bottom: 20px; color: #1a1a2e; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .stat { background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 1px 4px #0001; }
+  .stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .06em; }
+  .stat-value { font-size: 28px; font-weight: 700; color: #1a1a2e; margin-top: 4px; }
+
+  .card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px #0001; margin-bottom: 20px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+  .field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+  .field input:focus, .field select:focus { border-color: #e8a020; }
+  .btn { padding: 11px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: #e8a020; color: #fff; width: 100%; margin-top: 4px; }
+  .btn-primary:hover { background: #d4911a; }
+  .btn-primary:disabled { background:#ccc; cursor:not-allowed; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 10px 14px; font-size: 11px; color: #888; text-transform: uppercase; border-bottom: 1px solid #eee; }
+  td { padding: 12px 14px; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+  tr:last-child td { border-bottom: none; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: #e6f7ee; color: #27ae60; }
+  .badge-low { background: #fff3e0; color: #e67e22; }
+  .badge-out { background: #fdecea; color: #e74c3c; }
+  .empty { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+  .sync-tag { font-size:10px; color:#27ae60; }
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div style="color:#999;font-size:13px">Loading ParaNegosyo…</div>
+</div>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">ParaNegosyo</div>
+    <div class="login-sub">Inventory & Sales</div>
+    <div class="login-desc">Sign in with Google to access your inventory anywhere, on any device.</div>
+    <button class="btn-google" onclick="signInGoogle()">
+      <svg class="g-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google
+    </button>
+    <div class="login-note">🔒 Your data is private to your account only</div>
+  </div>
+</div>
+
+<div id="app-screen">
+  <nav>
+    <div class="nav-tabs">
+      <button class="active" onclick="show('dashboard', this)">📊 Dashboard</button>
+      <button onclick="show('products', this)">📦 Products</button>
+      <button onclick="show('sales', this)">💰 Sales</button>
+    </div>
+    <div class="nav-user">
+      <div class="user-avatar" id="user-avatar"></div>
+      <button class="btn-signout" onclick="doSignOut()">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="page active" id="page-dashboard">
+    <h2>Dashboard <span class="sync-tag" id="sync-tag">● synced</span></h2>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Products</div><div class="stat-value" id="d-products">0</div></div>
+      <div class="stat"><div class="stat-label">Total Revenue</div><div class="stat-value" id="d-revenue">$0</div></div>
+      <div class="stat"><div class="stat-label">Low Stock</div><div class="stat-value" id="d-low">0</div></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:15px;margin-bottom:14px">Recent Sales</h2>
+      <table><thead><tr><th>Product</th><th>Qty</th><th>Total</th><th>Date</th></tr></thead>
+      <tbody id="d-sales-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="page" id="page-products">
+    <h2>Products</h2>
+    <div class="card">
+      <div class="form-row">
+        <div class="field"><label>Product Name</label><input id="p-name" placeholder="e.g. Engine Oil"></div>
+        <div class="field"><label>SKU</label><input id="p-sku" placeholder="e.g. OIL-001"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Cost Price ($)</label><input id="p-cost" type="number" step="0.01" placeholder="0.00"></div>
+        <div class="field"><label>Sale Price ($)</label><input id="p-sale" type="number" step="0.01" placeholder="0.00"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Stock Quantity</label><input id="p-stock" type="number" placeholder="0"></div>
+        <div class="field"><label>Reorder Point</label><input id="p-reorder" type="number" placeholder="5"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addProduct()">+ Add Product</button>
+    </div>
+    <div class="card">
+      <table><thead><tr><th>Product</th><th>SKU</th><th>Sale Price</th><th>Stock</th><th>Status</th></tr></thead>
+      <tbody id="p-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="page" id="page-sales">
+    <h2>Record Sale</h2>
+    <div class="card">
+      <div class="form-row">
+        <div class="field"><label>Product</label><select id="s-product"><option value="">— select —</option></select></div>
+        <div class="field"><label>Quantity</label><input id="s-qty" type="number" placeholder="1" min="1"></div>
+      </div>
+      <div class="field" style="margin-bottom:12px"><label>Note (optional)</label><input id="s-note" placeholder="e.g. Walk-in customer"></div>
+      <button class="btn btn-primary" onclick="addSale()">Record Sale</button>
+    </div>
+    <div class="card">
+      <h2 style="font-size:15px;margin-bottom:14px">Sales History</h2>
+      <table><thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Note</th><th>Date</th></tr></thead>
+      <tbody id="s-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+  from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, doc, updateDoc, onSnapshot, serverTimestamp, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBHxQue_4PdWaMcSZL_XjVA85fXrQ1z3HM",
+  authDomain: "paranegosyo-d9819.firebaseapp.com",
+  projectId: "paranegosyo-d9819",
+  storageBucket: "paranegosyo-d9819.firebasestorage.app",
+  messagingSenderId: "903084170984",
+  appId: "1:903084170984:web:16a3038570024fc3ba335d",
+  measurementId: "G-XX51QJXXCN"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+let unsubs = [];
+
+window.signInGoogle = async () => {
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch(e) { alert('Sign in failed: ' + e.message); }
+};
+
+window.doSignOut = async () => {
+  unsubs.forEach(u=>u()); unsubs=[];
+  await fbSignOut(auth);
+};
+
+onAuthStateChanged(auth, user => {
+  document.getElementById('loading-screen').style.display = 'none';
+  if (user) {
+    currentUser = user;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    const av = document.getElementById('user-avatar');
+    if (user.photoURL) av.innerHTML = `<img src="${user.photoURL}">`;
+    else av.textContent = (user.displayName||user.email)[0].toUpperCase();
+    subscribe(user.uid);
+  } else {
+    currentUser = null;
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-screen').style.display = 'none';
+  }
+});
+
+function subscribe(uid) {
+  const base = `users/${uid}`;
+  const pU = onSnapshot(query(collection(db, base+'/products'), orderBy('createdAt','asc')), snap=>{
+    window.products = snap.docs.map(d=>({id:d.id,...d.data()}));
+    window.renderAll();
+  });
+  const sU = onSnapshot(query(collection(db, base+'/sales'), orderBy('createdAt','asc')), snap=>{
+    window.sales = snap.docs.map(d=>({id:d.id,...d.data()}));
+    window.renderAll();
+  });
+  unsubs = [pU, sU];
+}
+
+window._addProductFS = async (data) => {
+  setSync('saving');
+  await addDoc(collection(db, `users/${currentUser.uid}/products`), {...data, createdAt: serverTimestamp()});
+  setSync('synced');
+};
+window._addSaleFS = async (data) => {
+  setSync('saving');
+  await addDoc(collection(db, `users/${currentUser.uid}/sales`), {...data, createdAt: serverTimestamp()});
+  setSync('synced');
+};
+window._updateProductFS = async (id, data) => {
+  setSync('saving');
+  await updateDoc(doc(db, `users/${currentUser.uid}/products/${id}`), data);
+  setSync('synced');
+};
+function setSync(state){
+  const el = document.getElementById('sync-tag');
+  if(!el) return;
+  el.textContent = state==='saving' ? '↑ saving…' : '● synced';
+  el.style.color = state==='saving' ? '#e67e22' : '#27ae60';
+}
+</script>
+
+<script>
+window.products = [];
+window.sales = [];
+
+function show(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  btn.classList.add('active');
+  if (page === 'sales') populateSaleSelect();
+  renderAll();
+}
+
+function today() { return new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}); }
+function fmt(n) { return '$' + Number(n).toFixed(2); }
+
+async function addProduct() {
+  const name   = document.getElementById('p-name').value.trim();
+  const sku    = document.getElementById('p-sku').value.trim() || 'SKU-' + Date.now();
+  const cost   = parseFloat(document.getElementById('p-cost').value) || 0;
+  const sale   = parseFloat(document.getElementById('p-sale').value) || 0;
+  const stock  = parseInt(document.getElementById('p-stock').value) || 0;
+  const reorder= parseInt(document.getElementById('p-reorder').value) || 5;
+
+  if (!name) return alert('Product name is required.');
+
+  await window._addProductFS({ name, sku, cost, sale, stock, reorder });
+  ['p-name','p-sku','p-cost','p-sale','p-stock','p-reorder'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function addSale() {
+  const pid  = document.getElementById('s-product').value;
+  const qty  = parseInt(document.getElementById('s-qty').value) || 1;
+  const note = document.getElementById('s-note').value.trim() || '—';
+  const p    = window.products.find(p => p.id === pid);
+
+  if (!p) return alert('Select a product.');
+  if (qty > p.stock) return alert(`Only ${p.stock} units in stock!`);
+
+  await window._updateProductFS(p.id, { stock: p.stock - qty });
+  await window._addSaleFS({ productId: pid, productName: p.name, qty, price: p.sale, note, date: today() });
+
+  ['s-qty','s-note'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('s-product').value = '';
+  populateSaleSelect();
+}
+
+function populateSaleSelect() {
+  const sel = document.getElementById('s-product');
+  sel.innerHTML = '<option value="">— select product —</option>' +
+    window.products.filter(p => p.stock > 0)
+      .map(p => `<option value="${p.id}">${p.name} (${p.stock} in stock)</option>`).join('');
+}
+
+window.renderAll = function() {
+  const products = window.products, sales = window.sales;
+
+  const totalRev = sales.reduce((s, m) => s + m.qty * m.price, 0);
+  const lowCount = products.filter(p => p.stock <= p.reorder).length;
+  const dP = document.getElementById('d-products');
+  if(dP){
+    dP.textContent = products.length;
+    document.getElementById('d-revenue').textContent = fmt(totalRev);
+    document.getElementById('d-low').textContent = lowCount;
+    document.getElementById('d-sales-tbody').innerHTML = [...sales].reverse().slice(0, 5).map(s =>
+      `<tr><td>${s.productName}</td><td>${s.qty}</td><td>${fmt(s.qty * s.price)}</td><td style="color:#aaa">${s.date}</td></tr>`
+    ).join('') || `<tr><td colspan="4" class="empty">No sales yet</td></tr>`;
+  }
+
+  const pT = document.getElementById('p-tbody');
+  if(pT){
+    pT.innerHTML = products.map(p => {
+      const badge = p.stock === 0 ? '<span class="badge badge-out">Out</span>'
+        : p.stock <= p.reorder ? '<span class="badge badge-low">Low</span>'
+        : '<span class="badge badge-ok">OK</span>';
+      return `<tr><td><b>${p.name}</b></td><td style="color:#aaa">${p.sku}</td><td>${fmt(p.sale)}</td><td>${p.stock}</td><td>${badge}</td></tr>`;
+    }).join('') || `<tr><td colspan="5" class="empty">No products yet — add one above!</td></tr>`;
+  }
+
+  const sT = document.getElementById('s-tbody');
+  if(sT){
+    sT.innerHTML = [...sales].reverse().map(s =>
+      `<tr><td>${s.productName}</td><td>${s.qty}</td><td>${fmt(s.price)}</td><td><b>${fmt(s.qty * s.price)}</b></td><td style="color:#aaa">${s.note}</td><td style="color:#aaa">${s.date}</td></tr>`
+    ).join('') || `<tr><td colspan="6" class="empty">No sales recorded yet</td></tr>`;
+  }
+};
+</script>
+</body>
+</html>
